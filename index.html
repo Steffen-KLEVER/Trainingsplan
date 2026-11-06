@@ -320,6 +320,14 @@ section.part{ display:block; border:1px solid var(--line); border-radius:6px; pa
 .altopt.on{ background:var(--blue); border-color:var(--blue); color:#fff; }
 .tag.alt{ background:var(--callout); color:var(--callout-ink); }
 </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+.drv{ display:inline-flex; align-items:center; gap:6px; }
+.drv .dot{ width:8px; height:8px; border-radius:50%; background:var(--muted); display:inline-block; }
+.drv.on .dot{ background:var(--ok); } .drv.busy .dot{ background:var(--cyan,#18BAE8); } .drv.err .dot{ background:var(--red); }
+.drv .lbl-s{ display:none; }
+@media (max-width:640px){ .drv .lbl{ display:none; } .drv .lbl-s{ display:inline; } }
+</style>
 </head>
 <body>
 <header class="top"><div class="top-in"><img id="logo-c" class="logo logo-c" alt="KLEVER Kletterhallenverband e.V."><img id="logo-w" class="logo logo-w" alt="KLEVER Kletterhallenverband e.V."><div class="ttl">Trainingsplan-Generator<small>Grundlagenhandbuch Leistungsklettern</small></div><div class="sp"></div><div id="topright" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end"></div></div></header>
@@ -1376,6 +1384,7 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&a
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 const $ = sel => document.querySelector(sel);
 const LS_KEY = 'klever-trainingsplan-v1';
+const LS_DEL_KEY = 'klever-trainingsplan-deleted';
 const COLOR = { red: '#B01A3A', gold: '#F0C529', cyan: '#18BAE8', blue: '#0E71AC', slate: '#5B6873', ink: '#1E2B38', fixed: '#8A99A6' };
 const BLOCK_COL = { basis: '#18BAE8', kraft: '#B01A3A', power: '#F0C529', pe: '#0E71AC', aerob: '#5FA8D3', leistung: '#7A1428', taper: '#E3D23A' };
 
@@ -1393,14 +1402,143 @@ const STEPS = [
   ['Zusammenfassung', 'Alles prüfen – dann wird der Plan erstellt.']
 ];
 
-const S = { altOpen: null, addDay: null, addForm: null, athletes: {}, cur: null, view: 'home', step: 0, draft: null, tab: 'week', week: 0, dirty: false, saving: false, savedAt: null, store: 'lokal', err: '', flashId: null, ai: { busy: false } };
+const S = { altOpen: null, addDay: null, addForm: null, athletes: {}, deleted: {}, cur: null, view: 'home', step: 0, draft: null, tab: 'week', week: 0, dirty: false, saving: false, savedAt: null, store: 'lokal', err: '', flashId: null, ai: { busy: false } };
 const TIMER_REG = {};
 const OPEN_FLOW = new Set();
 let caps = { db: null, user: null, uid: null, downloads: null, sample: null };
 
 /* ---------- Speicher ---------- */
 function lsRead() { try { const r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r) : {}; } catch (e) { return {}; } }
-function lsWrite() { try { localStorage.setItem(LS_KEY, JSON.stringify(S.athletes)); return true; } catch (e) { return false; } }
+function lsWrite(noSync) { let ok = false; try { localStorage.setItem(LS_KEY, JSON.stringify(S.athletes)); localStorage.setItem(LS_DEL_KEY, JSON.stringify(S.deleted)); ok = true; } catch (e) { } if (!noSync) driveSchedule(); return ok; }
+function delRead() { try { const r = localStorage.getItem(LS_DEL_KEY); return r ? JSON.parse(r) : {}; } catch (e) { return {}; } }
+
+/* ---------- Google-Drive-Synchronisation ----------
+   Alle Profile liegen als eine JSON-Datei im versteckten App-Ordner von Google Drive (Scope drive.appdata).
+   Abgleich: neuere Version (Feld "updated") gewinnt; Löschungen werden als Zeitstempel mitgeführt. */
+const GDRIVE_CLIENT_ID = '63544297391-rf9s3ehghsn06ol0bh13m5and7ugotpa.apps.googleusercontent.com';
+const GD_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+const GD_FILE = 'klever-trainingsplan.json';
+const GD_FLAG = 'klever-trainingsplan-drive';
+const GD = { tc: null, token: null, exp: 0, fileId: null, state: 'off', last: null, timer: null, busy: false, again: false, waiters: [] };
+function gdEnabled() { try { return localStorage.getItem(GD_FLAG) === '1'; } catch (e) { return false; } }
+function gdSetEnabled(v) { try { v ? localStorage.setItem(GD_FLAG, '1') : localStorage.removeItem(GD_FLAG); } catch (e) { } }
+function gdReady() { return !!(GDRIVE_CLIENT_ID && window.google && google.accounts && google.accounts.oauth2); }
+function gdInitClient() {
+  if (GD.tc || !gdReady()) return !!GD.tc;
+  GD.tc = google.accounts.oauth2.initTokenClient({
+    client_id: GDRIVE_CLIENT_ID, scope: GD_SCOPE,
+    callback: r => {
+      const w = GD.waiters.splice(0);
+      if (r && r.access_token) { GD.token = r.access_token; GD.exp = Date.now() + ((+r.expires_in || 3600) - 60) * 1000; w.forEach(f => f.res(true)); }
+      else w.forEach(f => f.rej(r || {}));
+    },
+    error_callback: err => { GD.waiters.splice(0).forEach(f => f.rej(err || {})); }
+  });
+  return true;
+}
+function gdToken(interactive) {
+  if (GD.token && Date.now() < GD.exp) return Promise.resolve(true);
+  if (!gdInitClient()) return Promise.reject({ type: 'not_ready' });
+  return new Promise((res, rej) => { GD.waiters.push({ res, rej }); GD.tc.requestAccessToken({ prompt: '' }); setTimeout(() => { const i = GD.waiters.findIndex(f => f.res === res); if (i >= 0) { GD.waiters.splice(i, 1); rej({ type: 'timeout' }); } }, 90000); });
+}
+async function gdFetch(url, opt) {
+  opt = opt || {}; opt.headers = Object.assign({ Authorization: 'Bearer ' + GD.token }, opt.headers || {});
+  const r = await fetch(url, opt);
+  if (r.status === 401) { GD.token = null; throw { type: 'auth' }; }
+  if (!r.ok) throw { type: 'http', status: r.status };
+  return r;
+}
+async function gdFindFile() {
+  if (GD.fileId) return GD.fileId;
+  const q = encodeURIComponent("name='" + GD_FILE + "'");
+  const r = await gdFetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,modifiedTime)&orderBy=modifiedTime%20desc&q=' + q);
+  const j = await r.json();
+  GD.fileId = (j.files && j.files[0] && j.files[0].id) || null;
+  return GD.fileId;
+}
+async function gdDownload() {
+  const id = await gdFindFile(); if (!id) return null;
+  const r = await gdFetch('https://www.googleapis.com/drive/v3/files/' + id + '?alt=media');
+  try { return await r.json(); } catch (e) { return null; }
+}
+async function gdUpload(data) {
+  const body = JSON.stringify(data);
+  const id = await gdFindFile();
+  if (id) { await gdFetch('https://www.googleapis.com/upload/drive/v3/files/' + id + '?uploadType=media', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body }); return; }
+  const b = 'kleverboundary' + Date.now();
+  const multi = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify({ name: GD_FILE, parents: ['appDataFolder'] }) + '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + body + '\r\n--' + b + '--';
+  const r = await gdFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b }, body: multi });
+  const j = await r.json(); GD.fileId = j.id || null;
+}
+function gdMerge(remote) {
+  let changedLocal = false, changedRemote = false;
+  const rA = (remote && remote.athletes) || {}, rD = (remote && remote.deleted) || {};
+  Object.keys(rD).forEach(id => { if ((S.deleted[id] || '') < rD[id]) { S.deleted[id] = rD[id]; } });
+  Object.keys(S.deleted).forEach(id => { if ((rD[id] || '') !== S.deleted[id]) changedRemote = true; });
+  const ids = new Set(Object.keys(rA).concat(Object.keys(S.athletes)));
+  ids.forEach(id => {
+    const l = S.athletes[id], r = rA[id], del = S.deleted[id] || '';
+    const lu = l ? (l.updated || '') : '', ru = r ? (r.updated || '') : '';
+    const keepDirty = id === S.cur && S.dirty;
+    if (del && del >= lu && del >= ru && !keepDirty) {
+      if (l) { delete S.athletes[id]; changedLocal = true; if (S.cur === id) { S.cur = null; if (S.view !== 'form') S.view = 'home'; } }
+      if (r) changedRemote = true;
+      return;
+    }
+    if (r && (!l || ru > lu) && !keepDirty) { S.athletes[id] = r; changedLocal = true; }
+    else if (l && (!r || lu > ru)) changedRemote = true;
+  });
+  return { changedLocal, changedRemote };
+}
+async function driveSync(interactive) {
+  if (!GDRIVE_CLIENT_ID) return;
+  if (GD.busy) { GD.again = true; return; }
+  GD.busy = true; GD.state = 'busy'; renderTop();
+  try {
+    await gdToken(interactive);
+    const remote = await gdDownload();
+    const m = gdMerge(remote);
+    if (m.changedLocal) { lsWrite(true); if (S.view !== 'form') render(); }
+    if (m.changedRemote || !remote) await gdUpload({ app: 'klever-trainingsplan', version: 1, savedAt: new Date().toISOString(), athletes: S.athletes, deleted: S.deleted });
+    GD.state = 'on'; GD.last = new Date();
+    if (interactive) toast('Mit Google Drive synchronisiert.');
+  } catch (e) {
+    GD.state = 'err';
+    if (interactive) toast(e && (e.type === 'popup_closed' || e.error === 'access_denied') ? 'Google-Anmeldung abgebrochen.' : 'Drive-Synchronisation fehlgeschlagen. Tippe auf „Drive“, um es erneut zu versuchen.');
+  }
+  GD.busy = false; renderTop();
+  if (GD.again) { GD.again = false; driveSync(false); }
+}
+function driveSchedule() {
+  if (!GDRIVE_CLIENT_ID || !gdEnabled()) return;
+  clearTimeout(GD.timer); GD.timer = setTimeout(() => driveSync(false), 1200);
+}
+async function driveConnect() {
+  if (!gdReady()) { toast('Google-Anmeldung wird noch geladen – bitte gleich noch einmal tippen.'); return; }
+  gdSetEnabled(true); await driveSync(true);
+  if (GD.state !== 'on' && !GD.token) gdSetEnabled(false);
+}
+function driveDisconnect() {
+  if (!confirm('Google-Drive-Synchronisation in diesem Browser beenden? Die Daten bleiben hier und in Drive erhalten.')) return;
+  try { if (GD.token) google.accounts.oauth2.revoke(GD.token, () => { }); } catch (e) { }
+  GD.token = null; GD.exp = 0; GD.fileId = null; GD.state = 'off'; gdSetEnabled(false); renderTop();
+}
+function driveBoot() {
+  if (!GDRIVE_CLIENT_ID) return;
+  let n = 0;
+  const t = setInterval(() => {
+    if (gdReady()) { clearInterval(t); gdInitClient(); if (gdEnabled()) { GD.state = 'err'; driveSync(false); } renderTop(); }
+    else if (++n > 40) clearInterval(t);
+  }, 250);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && gdEnabled() && GD.token && Date.now() < GD.exp) driveSync(false); });
+}
+function driveChip() {
+  if (!GDRIVE_CLIENT_ID) return '';
+  if (!gdEnabled()) return '<button class="btn ghost sm drv" data-a="drive" title="Profile über Google Drive auf allen Geräten synchronisieren"><span class="dot"></span><span class="lbl">Mit Google Drive verbinden</span><span class="lbl-s">Drive</span></button>';
+  const cls = GD.state === 'busy' ? 'busy' : GD.state === 'on' ? 'on' : 'err';
+  const lbl = GD.state === 'busy' ? 'Drive: synchronisiert …' : GD.state === 'on' ? 'Drive ✓ ' + (GD.last ? GD.last.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '') : 'Drive: tippen zum Verbinden';
+  return '<button class="btn ghost sm drv ' + cls + '" data-a="drive" title="Jetzt mit Google Drive synchronisieren"><span class="dot"></span><span class="lbl">' + lbl + '</span><span class="lbl-s">Drive</span></button>' + (S.view === 'home' ? ' <button class="btn ghost sm" data-a="drive-off" title="Drive-Synchronisation in diesem Browser beenden">Trennen</button>' : '');
+}
 async function initCaps() {
   try {
     if (!window.claude || !window.claude.use) return;
@@ -1439,12 +1577,12 @@ async function saveCurrent() {
     } catch (e) { okCloud = false; }
   }
   S.saving = false;
-  if (okCloud || okLocal) { S.dirty = false; S.savedAt = new Date(); toast(okCloud ? 'Gespeichert – in deinem Claude-Konto, auf allen Geräten verfügbar.' : 'Gespeichert – in diesem Browser.'); }
+  if (okCloud || okLocal) { S.dirty = false; S.savedAt = new Date(); toast(okCloud ? 'Gespeichert – in deinem Claude-Konto, auf allen Geräten verfügbar.' : (GDRIVE_CLIENT_ID && gdEnabled()) ? 'Gespeichert – wird mit Google Drive synchronisiert.' : 'Gespeichert – in diesem Browser.'); }
   else toast('Speichern fehlgeschlagen. Exportiere den Plan als Datei, damit nichts verloren geht.');
   renderTop();
 }
 async function deleteAthlete(id) {
-  delete S.athletes[id]; lsWrite();
+  delete S.athletes[id]; S.deleted[id] = new Date().toISOString(); lsWrite();
   if (caps.db && caps.uid) { try { await caps.db.collection('data/users/' + caps.uid + '/athletes').doc(id).delete(); } catch (e) { } }
   if (S.cur === id) { S.cur = null; S.view = 'home'; S.dirty = false; }
   render();
@@ -1478,10 +1616,10 @@ function renderTop() {
   const a = S.athletes[S.cur];
   let st = '';
   if (S.view === 'plan' && a) {
-    st = S.saving ? '<span class="savestate">Speichert …</span>' : S.dirty ? '<span class="savestate dirty">Ungespeicherte Änderungen</span>' : S.savedAt ? '<span class="savestate ok">Gespeichert</span>' : '<span class="savestate neutral">' + (S.store === 'cloud' ? 'Speicherort: Claude-Konto' : 'Speicherort: Browser') + '</span>';
+    st = S.saving ? '<span class="savestate">Speichert …</span>' : S.dirty ? '<span class="savestate dirty">Ungespeicherte Änderungen</span>' : S.savedAt ? '<span class="savestate ok">Gespeichert</span>' : '<span class="savestate neutral">' + (S.store === 'cloud' ? 'Speicherort: Claude-Konto' : (GDRIVE_CLIENT_ID && gdEnabled()) ? 'Speicherort: Browser + Google Drive' : 'Speicherort: Browser') + '</span>';
     st += ' <button class="btn sm" data-a="save" ' + (S.saving ? 'disabled' : '') + '>Speichern</button>';
   }
-  $('#topright').innerHTML = (S.view !== 'home' ? '<button class="btn ghost sm" data-a="home">Alle Profile</button>' : '') + st;
+  $('#topright').innerHTML = driveChip() + (S.view !== 'home' ? '<button class="btn ghost sm" data-a="home">Alle Profile</button>' : '') + st;
 }
 
 function shardsSVG() {
@@ -2208,6 +2346,8 @@ document.addEventListener('click', e => {
   const el = e.target.closest('[data-a]'); if (!el) return;
   const A = el.dataset.a;
   if (A === 'import') return;
+  if (A === 'drive') { if (!gdEnabled()) driveConnect(); else driveSync(true); return; }
+  if (A === 'drive-off') { driveDisconnect(); return; }
   if (A === 'home') { if (S.view === 'plan' && S.dirty) saveCurrent(); S.view = 'home'; render(); window.scrollTo(0, 0); }
   else if (A === 'new') { S.cur = null; S.draft = newProfile(); S.step = 0; S.err = ''; S.view = 'form'; render(); window.scrollTo(0, 0); }
   else if (A === 'edit') { S.cur = el.dataset.id; S.draft = JSON.parse(JSON.stringify(S.athletes[S.cur].profile)); S.step = 0; S.err = ''; S.view = 'form'; render(); window.scrollTo(0, 0); }
@@ -2257,9 +2397,11 @@ window.addEventListener('beforeunload', e => { if (S.dirty) { e.preventDefault()
 
 /* ---------- Start ---------- */
 S.athletes = lsRead();
+S.deleted = delRead();
 document.getElementById('logo-c').src = LOGO_C; document.getElementById('logo-w').src = LOGO_W;
 render();
 initCaps();
+driveBoot();
 
 </script>
 </body>
