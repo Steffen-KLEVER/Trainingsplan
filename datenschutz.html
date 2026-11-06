@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Datenschutzerklärung – Trainingsplan-Generator</title>
+<style>
+:root{ --ink:#1E2B38; --muted:#5B6873; --blue:#0E71AC; --line:#D9E0E6; --bg:#F3F6F9; --card:#fff; }
+@media (prefers-color-scheme: dark){ :root{ --ink:#E6ECF1; --muted:#A3B0BB; --blue:#5FB4E6; --line:#33414E; --bg:#141B22; --card:#1C252E; } }
+*{ box-sizing:border-box; }
+body{ margin:0; background:var(--bg); color:var(--ink); font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+main{ max-width:780px; margin:0 auto; padding:32px 16px 64px; }
+.card{ background:var(--card); border:1px solid var(--line); border-radius:10px; padding:28px 24px; }
+h1{ font-size:28px; line-height:1.25; margin:0 0 6px; }
+h2{ font-size:19px; margin:30px 0 8px; color:var(--blue); }
+p,li{ margin:0 0 10px; }
+ul{ padding-left:22px; }
+a{ color:var(--blue); }
+.meta{ color:var(--muted); font-size:14px; margin-bottom:22px; }
+.back{ display:inline-block; margin-bottom:18px; font-weight:600; text-decoration:none; }
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="./">← Zurück zum Trainingsplan-Generator</a>
+<div class="card">
+<h1>Datenschutzerklärung</h1>
+<div class="meta">für den Trainingsplan-Generator unter steffen-klever.github.io/Trainingsplan · Stand: November 2026</div>
+
+<h2>1. Verantwortlicher</h2>
+<p>Steffen Schill<br>E-Mail: <a href="mailto:steffen.schill23@gmail.com">steffen.schill23@gmail.com</a></p>
+<p>Der Trainingsplan-Generator ist ein kostenloses, nicht-kommerzielles Werkzeug. Es gibt kein Benutzerkonto beim Anbieter und keinen eigenen Server, auf dem Trainingsdaten gespeichert werden.</p>
+
+<h2>2. Kurz zusammengefasst</h2>
+<ul>
+<li>Profile, Pläne und Rückmeldungen, die du eingibst, werden <strong>nur in deinem Browser</strong> gespeichert (localStorage).</li>
+<li>Wenn du die <strong>Google-Drive-Synchronisation</strong> einschaltest, wird zusätzlich eine Kopie in <strong>deinem eigenen Google Drive</strong> abgelegt. Der Anbieter hat darauf keinen Zugriff.</li>
+<li>Es gibt keine Analyse- oder Werbe-Tools und keine Tracking-Cookies.</li>
+<li>Beim Aufruf der Seite werden technisch bedingt Verbindungen zu GitHub (Hosting) und Google (Schriftarten, Anmeldedienst) hergestellt; dabei wird deine IP-Adresse übertragen.</li>
+</ul>
+
+<h2>3. Hosting über GitHub Pages</h2>
+<p>Die Seite wird über GitHub Pages bereitgestellt (GitHub, Inc., 88 Colin P. Kelly Jr. St., San Francisco, CA 94107, USA). Beim Aufruf verarbeitet GitHub Verbindungsdaten wie IP-Adresse, Zeitpunkt, aufgerufene Datei und Browserkennung, um die Seite auszuliefern und die Sicherheit zu gewährleisten. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer zuverlässigen Bereitstellung). Dabei können Daten in die USA übermittelt werden. GitHub stützt sich dafür nach eigenen Angaben auf das EU-US Data Privacy Framework bzw. EU-Standardvertragsklauseln. Details: <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener">Datenschutzerklärung von GitHub</a>.</p>
+
+<h2>4. Speicherung im Browser (localStorage)</h2>
+<p>Alle Angaben, die du im Generator machst – z. B. Name, Alter, Größe, Gewicht, Leistungsstand, Trainingszeiten, Beschwerden und Notizen zu Einheiten – werden ausschließlich lokal im Speicher deines Browsers abgelegt. Diese Daten werden nicht an den Anbieter übertragen. Du kannst sie jederzeit in der App löschen oder über die Browser-Einstellungen („Websitedaten löschen“) entfernen. Zusätzlich merkt sich die App, ob du die Drive-Synchronisation eingeschaltet hast.</p>
+<p>Angaben zu Beschwerden oder Verletzungen sind Gesundheitsdaten. Sie bleiben ebenfalls nur in deinem Browser bzw. in deinem eigenen Google Drive. Wenn du Profile für andere Personen anlegst (z. B. als Trainer:in), bist du selbst dafür verantwortlich, dass diese Personen – bei Minderjährigen die Erziehungsberechtigten – damit einverstanden sind.</p>
+
+<h2>5. Optionale Synchronisation mit Google Drive</h2>
+<p>Über den Button „Mit Google Drive verbinden“ kannst du deine Daten zwischen mehreren Geräten abgleichen. Dafür meldest du dich bei Google an (Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland) und erteilst der App die Berechtigung <code>drive.appdata</code>.</p>
+<ul>
+<li><strong>Welche Daten:</strong> Die App speichert eine einzige Datei (<code>klever-trainingsplan.json</code>) mit deinen Profilen, Plänen und Rückmeldungen im versteckten App-Ordner deines Google Drive.</li>
+<li><strong>Zugriffsumfang:</strong> Die Berechtigung erlaubt nur den Zugriff auf diesen App-Ordner. Deine übrigen Dateien in Google Drive kann die App weder sehen noch verändern.</li>
+<li><strong>Kein Zugriff durch den Anbieter:</strong> Die Datei liegt in deinem Google-Konto. Der Abgleich läuft direkt zwischen deinem Browser und Google; der Anbieter erhält weder die Datei noch dein Zugriffstoken. Das Token wird nur im Arbeitsspeicher des Browsers gehalten und läuft nach etwa einer Stunde ab.</li>
+<li><strong>Rechtsgrundlage:</strong> deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, bei Gesundheitsdaten Art. 9 Abs. 2 lit. a DSGVO), die du mit dem Verbinden erteilst.</li>
+<li><strong>Widerruf:</strong> Über „Trennen“ in der App beendest du die Synchronisation in diesem Browser. Die Berechtigung kannst du jederzeit unter <a href="https://myaccount.google.com/connections" target="_blank" rel="noopener">myaccount.google.com/connections</a> entziehen. Die gespeicherte Datei kannst du in Google Drive unter „Einstellungen → Apps verwalten“ löschen.</li>
+</ul>
+<p>Die Verwendung und Übertragung von Informationen, die die App über Google-APIs erhält, entspricht der <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>, einschließlich der Anforderungen zur eingeschränkten Nutzung (Limited Use). Die Daten werden ausschließlich für die Synchronisation verwendet, nicht an Dritte weitergegeben und nicht für Werbung oder zum Training von KI-Modellen genutzt.</p>
+<p>Für die Anmeldung lädt die Seite das Skript des Google-Anmeldedienstes (accounts.google.com). Dabei wird deine IP-Adresse an Google übertragen, auch wenn du dich nicht verbindest. Google kann Daten auch in die USA übermitteln; Google ist unter dem EU-US Data Privacy Framework zertifiziert. Mehr dazu in der <a href="https://policies.google.com/privacy?hl=de" target="_blank" rel="noopener">Datenschutzerklärung von Google</a>.</p>
+
+<h2>6. Google Fonts</h2>
+<p>Die Seite lädt Schriftarten von Google Fonts (fonts.googleapis.com, fonts.gstatic.com). Dabei überträgt dein Browser deine IP-Adresse an Google. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (einheitliche, gut lesbare Darstellung).</p>
+
+<h2>7. PDF-Export</h2>
+<p>Wenn du einen Plan als PDF exportierst, lädt die App dafür eine Programmbibliothek (jsPDF) von cdnjs (Cloudflare, Inc., USA). Dabei wird deine IP-Adresse an Cloudflare übertragen. Das PDF selbst wird in deinem Browser erzeugt; deine Trainingsdaten werden nicht übertragen. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO.</p>
+
+<h2>8. Deine Rechte</h2>
+<p>Du hast das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21). Eine erteilte Einwilligung kannst du jederzeit mit Wirkung für die Zukunft widerrufen. Da der Anbieter selbst keine Trainingsdaten speichert, kannst du die meisten dieser Rechte direkt in der App, in deinem Browser oder in deinem Google-Konto ausüben. Für Fragen genügt eine E-Mail an die oben genannte Adresse.</p>
+<p>Außerdem hast du das Recht, dich bei einer Datenschutz-Aufsichtsbehörde zu beschweren, z. B. bei der Behörde deines Wohnorts.</p>
+
+<h2>9. Änderungen</h2>
+<p>Diese Datenschutzerklärung wird angepasst, wenn sich die App oder die rechtlichen Anforderungen ändern. Es gilt die jeweils hier veröffentlichte Fassung.</p>
+</div>
+</main>
+</body>
+</html>
